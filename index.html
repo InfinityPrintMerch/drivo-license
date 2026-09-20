@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drivo - Admin Panel</title>
+    <style>
+        :root { --bg: #0a0a0c; --card: #1c1c1e; --accent: #ffbb00; --text: #fff; --text-muted: #aaa; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #333; padding-bottom: 20px; }
+        h1 { margin: 0; color: var(--accent); }
+        .card { background-color: var(--card); border-radius: 12px; padding: 20px; border: 1px solid #333; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #333; }
+        th { color: var(--text-muted); font-weight: 600; font-size: 14px; }
+        .status-btn { padding: 6px 12px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.2s; }
+        .status-on { background-color: rgba(46, 213, 115, 0.2); color: #2ed573; border: 1px solid #2ed573; }
+        .status-off { background-color: rgba(255, 71, 87, 0.2); color: #ff4757; border: 1px solid #ff4757; }
+        .device-id { font-family: monospace; color: var(--text-muted); font-size: 13px; }
+        .loader { display: none; color: var(--accent); font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Drivo Beta Manager</h1>
+            <span class="loader" id="loader">Actualizando...</span>
+            <button onclick="cargarDatos()" style="padding: 8px 16px; background: var(--accent); border:none; border-radius: 6px; cursor: pointer; font-weight: bold;">Recargar</button>
+        </header>
+
+        <div class="card">
+            <table id="devicesTable">
+                <thead>
+                    <tr>
+                        <th>Modelo</th>
+                        <th>Device ID</th>
+                        <th>Fecha Registro</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Se llena con JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // PEGA AQUÍ LA URL DE TU GOOGLE SCRIPT
+        const SCRIPT_URL = "https://script.google.com/macros/s/TU_SCRIPT_ID/exec";
+
+        async function cargarDatos() {
+            document.getElementById('loader').style.display = 'block';
+            try {
+                const response = await fetch(SCRIPT_URL + "?action=get_all");
+                const data = await response.json();
+                renderTable(data);
+            } catch (error) {
+                alert("Error al cargar datos.");
+            }
+            document.getElementById('loader').style.display = 'none';
+        }
+
+        async function toggleStatus(deviceId, estadoActual) {
+            document.getElementById('loader').style.display = 'block';
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: "POST",
+                    body: JSON.stringify({
+                        action: "update",
+                        device_id: deviceId,
+                        permitido: !estadoActual
+                    })
+                });
+                await cargarDatos(); // Recargar tras actualizar
+            } catch (error) {
+                alert("Error al actualizar el estado.");
+            }
+        }
+
+        function renderTable(devices) {
+            const tbody = document.querySelector("#devicesTable tbody");
+            tbody.innerHTML = "";
+            
+            devices.forEach(dev => {
+                // dev = { device_id: "...", modelo: "...", permitido: true, fecha: "..." }
+                const isPermitted = dev.permitido === true || dev.permitido === "TRUE";
+                const btnClass = isPermitted ? "status-on" : "status-off";
+                const btnText = isPermitted ? "ACTIVO" : "BLOQUEADO";
+
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td style="font-weight: bold;">${dev.modelo}</td>
+                    <td class="device-id">${dev.device_id}</td>
+                    <td style="color: #aaa; font-size: 13px;">${dev.fecha}</td>
+                    <td>
+                        <button class="status-btn ${btnClass}" onclick="toggleStatus('${dev.device_id}', ${isPermitted})">
+                            ${btnText}
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Cargar al iniciar
+        cargarDatos();
+    </script>
+</body>
+</html>
