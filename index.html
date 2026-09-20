@@ -57,7 +57,8 @@
                 const data = await response.json();
                 renderTable(data);
             } catch (error) {
-                alert("Error al cargar datos.");
+                console.error(error);
+                alert("Error al cargar datos. Revisa la consola.");
             }
             document.getElementById('loader').style.display = 'none';
         }
@@ -65,16 +66,21 @@
         async function toggleStatus(deviceId, estadoActual) {
             document.getElementById('loader').style.display = 'block';
             try {
-                const response = await fetch(SCRIPT_URL, {
+                await fetch(SCRIPT_URL, {
                     method: "POST",
+                    // CLAVE PARA EVITAR CORS EN APPS SCRIPT: usar text/plain
+                    headers: {
+                        "Content-Type": "text/plain;charset=utf-8",
+                    },
                     body: JSON.stringify({
                         action: "update",
                         device_id: deviceId,
                         permitido: !estadoActual
                     })
                 });
-                await cargarDatos(); // Recargar tras actualizar
+                await cargarDatos(); 
             } catch (error) {
+                console.error(error);
                 alert("Error al actualizar el estado.");
             }
         }
@@ -84,7 +90,6 @@
             tbody.innerHTML = "";
             
             devices.forEach(dev => {
-                // dev = { device_id: "...", modelo: "...", permitido: true, fecha: "..." }
                 const isPermitted = dev.permitido === true || dev.permitido === "TRUE";
                 const btnClass = isPermitted ? "status-on" : "status-off";
                 const btnText = isPermitted ? "ACTIVO" : "BLOQUEADO";
@@ -104,7 +109,6 @@
             });
         }
 
-        // Cargar al iniciar
         cargarDatos();
     </script>
 </body>
